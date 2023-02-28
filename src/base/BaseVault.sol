@@ -8,6 +8,7 @@ import "openzeppelin-contracts/contracts/access/Ownable.sol";
 contract BaseVault is ERC20, Ownable {
     IERC20Metadata public immutable underlying;
     uint8 internal immutable _decimals;
+    uint256 internal immutable scalingFactor;
 
     uint256 public highWaterMark;
     uint256 public allTimeHigh;
@@ -32,14 +33,15 @@ contract BaseVault is ERC20, Ownable {
     constructor(address _underlying, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
         underlying = IERC20Metadata(_underlying);
         _decimals = underlying.decimals();
+        scalingFactor = 10**_decimals;
 
-        highWaterMark = 10 ** _decimals;
+        highWaterMark = scalingFactor;
         allTimeHigh = highWaterMark;
     }
 
     function deposit(uint256 _underlyingAmount) external {
         uint256 amountToMint = getShareAmount(_underlyingAmount);
-        require(totalSupply() + amountToMint <= maxSupply * 10**_decimals,"Max supply exceeded");
+        require(totalSupply() + amountToMint <= maxSupply * scalingFactor,"Max supply exceeded");
         underlying.transferFrom(msg.sender, address(this), _underlyingAmount);
         _mint(msg.sender, amountToMint);
     }
@@ -76,7 +78,7 @@ contract BaseVault is ERC20, Ownable {
         highWaterMark = watermark;
 
         if (highWaterMark > allTimeHigh) {
-            uint256 totalProfits = ((highWaterMark - allTimeHigh) * totalBalance) / 10 ** _decimals;
+            uint256 totalProfits = ((highWaterMark - allTimeHigh) * totalBalance) / scalingFactor;
             uint256 stakingShare = totalProfits * stakingPercent / 1000;
             underlying.transfer(stakingContract, stakingShare);
 
@@ -98,7 +100,7 @@ contract BaseVault is ERC20, Ownable {
     }
 
     function setMaxSupply(uint256 _newSupply) external onlyOwner {
-        require(_newSupply > totalSupply() / 10**_decimals,"Invalid max supply");
+        require(_newSupply > totalSupply() / scalingFactor,"Invalid max supply");
         maxSupply = _newSupply;
     }
 
@@ -116,7 +118,7 @@ contract BaseVault is ERC20, Ownable {
 
     function getHighWaterMark() public view returns (uint256 watermark, uint256 totalBalance) {
         totalBalance = getUnderlyingBalance();
-        return (totalSupply() * 10 ** _decimals / totalBalance, totalBalance);
+        return (totalBalance * scalingFactor / totalSupply(), totalBalance);
     }
 
     function decimals() public view override returns (uint8) {
