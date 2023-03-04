@@ -28,5 +28,8 @@
     "lint:sol": "forge fmt --check && yarn solhint \"{script,src,test}/**/*.sol\"",
     "prettier:check": "prettier --check \"**/*.{json,md,yml}\"",
     "prettier:write": "prettier --write \"**/*.{json,md,yml}\""
+  },
+  "dependencies": {
+    "@api3/airnode-protocol": "^0.10.0"
   }
 }

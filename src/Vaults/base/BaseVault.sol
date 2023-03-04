@@ -33,7 +33,7 @@ contract BaseVault is ERC20, Ownable {
     constructor(address _underlying, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
         underlying = IERC20Metadata(_underlying);
         _decimals = underlying.decimals();
-        scalingFactor = 10**_decimals;
+        scalingFactor = 10 ** _decimals;
 
         highWaterMark = scalingFactor;
         allTimeHigh = highWaterMark;
@@ -41,7 +41,7 @@ contract BaseVault is ERC20, Ownable {
 
     function deposit(uint256 _underlyingAmount) external {
         uint256 amountToMint = getShareAmount(_underlyingAmount);
-        require(totalSupply() + amountToMint <= maxSupply * scalingFactor,"Max supply exceeded");
+        require(totalSupply() + amountToMint <= maxSupply * scalingFactor, "Max supply exceeded");
         underlying.transferFrom(msg.sender, address(this), _underlyingAmount);
         _mint(msg.sender, amountToMint);
     }
@@ -67,23 +67,20 @@ contract BaseVault is ERC20, Ownable {
         require(amount >= _unlockAmount, "Invalid unlock amount");
 
         totalLockedAmount -= amount;
-        uint256 transferAmount = amount - _unlockAmount;
 
-        if (transferAmount > 0) {
-            underlying.transfer(msg.sender, transferAmount);
+        if (_unlockAmount > 0) {
+            underlying.transfer(msg.sender, _unlockAmount);
         }
 
-        (uint256 watermark, uint256 totalBalance) = getHighWaterMark();
         // solhint-disable reentrancy
-        highWaterMark = watermark;
+        highWaterMark = getHighWaterMark();
 
         if (highWaterMark > allTimeHigh) {
-            uint256 totalProfits = ((highWaterMark - allTimeHigh) * totalBalance) / scalingFactor;
-            uint256 stakingShare = totalProfits * stakingPercent / 1000;
+            uint256 totalProfits = (highWaterMark - allTimeHigh) * totalSupply();
+            uint256 stakingShare = (totalProfits * stakingPercent / 1000) / scalingFactor;
             underlying.transfer(stakingContract, stakingShare);
 
-            (watermark,) = getHighWaterMark();
-            highWaterMark = watermark;
+            highWaterMark = getHighWaterMark();
             allTimeHigh = highWaterMark;
         }
 
@@ -100,7 +97,7 @@ contract BaseVault is ERC20, Ownable {
     }
 
     function setMaxSupply(uint256 _newSupply) external onlyOwner {
-        require(_newSupply > totalSupply() / scalingFactor,"Invalid max supply");
+        require(_newSupply > totalSupply() / scalingFactor, "Invalid max supply");
         maxSupply = _newSupply;
     }
 
@@ -116,9 +113,8 @@ contract BaseVault is ERC20, Ownable {
         return underlying.balanceOf(address(this));
     }
 
-    function getHighWaterMark() public view returns (uint256 watermark, uint256 totalBalance) {
-        totalBalance = getUnderlyingBalance();
-        return (totalBalance * scalingFactor / totalSupply(), totalBalance);
+    function getHighWaterMark() public view returns (uint256 watermark) {
+        return (getUnderlyingBalance() * scalingFactor / totalSupply());
     }
 
     function decimals() public view override returns (uint8) {
