@@ -163,8 +163,10 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         t.minPossibleFragment = _minBet / 18;
     }
 
-    function setSponsorWallet(address _newWallet) external onlyOwner {
-        sponsorWallet = _newWallet;
+    function setOracle(address _airnode, address _sponsorWallet, bytes32 _endpointIdUint256) external onlyOwner {
+        airnode = _airnode;
+        sponsorWallet = _sponsorWallet;
+        endpointIdUint256 = _endpointIdUint256;
     }
 
     function getTotalBetsByUser(address _user) external view returns (uint256) {
