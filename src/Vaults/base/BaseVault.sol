@@ -40,7 +40,7 @@ contract BaseVault is ERC20, Ownable {
     }
 
     function deposit(uint256 _underlyingAmount) external {
-        uint256 amountToMint = getShareAmount(_underlyingAmount);
+        uint256 amountToMint = totalSupply() == 0 ? _underlyingAmount : getShareAmount(_underlyingAmount);
         require(totalSupply() + amountToMint <= maxSupply * scalingFactor, "Max supply exceeded");
         underlying.transferFrom(msg.sender, address(this), _underlyingAmount);
         _mint(msg.sender, amountToMint);
