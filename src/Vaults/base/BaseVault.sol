@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol";
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol";
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract BaseVault is ERC20, Ownable {
     IERC20Metadata public immutable underlying;
@@ -18,7 +18,7 @@ contract BaseVault is ERC20, Ownable {
     uint256 public maxSupply = 100_000;
 
     mapping(address => bool) public isVaultController;
-    mapping(uint256 => uint256) public lockAmounts;
+    mapping(uint256 => uint256) internal lockAmounts;
 
     uint256 internal totalLockedAmount;
 
@@ -65,6 +65,7 @@ contract BaseVault is ERC20, Ownable {
     function unlockBet(uint256 _betId, uint256 _unlockAmount) external onlyController {
         uint256 amount = lockAmounts[_betId];
         require(amount >= _unlockAmount, "Invalid unlock amount");
+        lockAmounts[_betId] = 0;
 
         totalLockedAmount -= amount;
 
