@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "./base/BaseVault.sol";
+import {BaseVault} from "./base/BaseVault.sol";
 
 contract DekasinoUSDT is BaseVault {
   //Goerli Testnet USDT

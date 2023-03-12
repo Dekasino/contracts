@@ -1,12 +1,11 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "openzeppelin-contracts/contracts/interfaces/IERC721.sol";
-import "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
-import "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
-import "src/Vaults/Interface/IVault.sol";
+import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
+import {IVault} from "src/Vaults/Interface/IVault.sol";
 
 contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     error BetAmount();
@@ -18,7 +17,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         bytes32 requestId;
         address player;
         address token;
-        uint8[38] betAmounts;
+        uint256[38] betAmounts;
         uint256 totalBet;
         uint8 status;
     }
@@ -49,7 +48,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     mapping(address => Bet[]) public userBets;
     mapping(address => Token) public tokens;
 
-    event BetPlaced(address indexed user, uint256 betAmount, uint8[38] bets, address token, uint256 timestamp);
+    event BetPlaced(address indexed user, uint256 betAmount, uint256[38] bets, address token, uint256 timestamp);
     event WheelSpinned(
         address indexed user,
         address token,
@@ -70,7 +69,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         validChoice[18] = true; //High/Low/Red/Black/Odd/Even
     }
 
-    function placeBet(address _token, uint8[38] memory _betAmounts) external {
+    function placeBet(address _token, uint256[38] memory _betAmounts) external {
         (uint256 total, uint256 highest) = _validateBet(_token, _betAmounts);
         IERC20 token = IERC20(_token);
 
@@ -119,7 +118,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
     function _validateBet(
         address _token,
-        uint8[38] memory _betAmounts
+        uint256[38] memory _betAmounts
     )
         internal
         view
