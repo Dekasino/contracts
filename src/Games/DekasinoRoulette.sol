@@ -51,9 +51,10 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     mapping(address => Bet[]) public userBets;
     mapping(address => Token) public tokens;
 
-    event BetPlaced(address indexed user, uint256 betAmount, uint256[38] bets, address token, uint256 timestamp);
+    event BetPlaced(address indexed user, uint256 requestId, uint256 betAmount, uint256[38] bets, address token, uint256 timestamp);
     event WheelSpinned(
         address indexed user,
+        uint256 requestId,
         address token,
         uint256 rolledNumber,
         uint256 totalBet,
@@ -92,7 +93,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         idToSystemIndex[requestId] = allBets.length - 1;
         idToUserIndex[requestId] = userBets[msg.sender].length - 1;
 
-        emit BetPlaced(msg.sender, total, _betAmounts, _token, block.timestamp);
+        emit BetPlaced(msg.sender, uint256(requestId), total, _betAmounts, _token, block.timestamp);
     }
 
     function fulfillUint256(bytes32 requestId, bytes calldata data) external onlyAirnodeRrp {
@@ -121,7 +122,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         user.rolledNumber = rolledNumber;
         system.rolledNumber = rolledNumber;
 
-        emit WheelSpinned(user.player, user.token, rolledNumber, user.totalBet, wonAmount, block.timestamp);
+        emit WheelSpinned(user.player, uint256(requestId), user.token, rolledNumber, user.totalBet, wonAmount, block.timestamp);
     }
 
     function _validateBet(
