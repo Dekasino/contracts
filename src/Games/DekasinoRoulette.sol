@@ -19,7 +19,10 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         address token;
         uint256[38] betAmounts;
         uint256 totalBet;
-        uint8 status;
+        uint256 wonAmount;
+        uint256 timestamp;
+        uint256 rolledNumber;
+        bool status;
     }
 
     struct Token {
@@ -82,8 +85,8 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
         tokens[_token].vault.lockBet(uint256(requestId), maxPayout);
 
-        allBets.push(Bet(requestId, msg.sender, _token, _betAmounts, total, 0));
-        userBets[msg.sender].push(Bet(requestId, msg.sender, _token, _betAmounts, total, 0));
+        allBets.push(Bet(requestId, msg.sender, _token, _betAmounts, total,0,block.timestamp,0, false));
+        userBets[msg.sender].push(Bet(requestId, msg.sender, _token, _betAmounts, total,0,block.timestamp,0, false));
 
         idToUser[requestId] = msg.sender;
         idToSystemIndex[requestId] = allBets.length - 1;
@@ -109,9 +112,14 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
         if (wonAmount > 0) {
             token.transfer(user.player, wonAmount);
-            user.status = 1;
-            system.status = 1;
+            user.status = true;
+            system.status = true;
+            user.wonAmount = wonAmount;
+            system.wonAmount = wonAmount;
         }
+
+        user.rolledNumber = rolledNumber;
+        system.rolledNumber = rolledNumber;
 
         emit WheelSpinned(user.player, user.token, rolledNumber, user.totalBet, wonAmount, block.timestamp);
     }

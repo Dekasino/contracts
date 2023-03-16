@@ -9,12 +9,41 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@Dekasino/dekasino-contracts@workspace:."
   dependencies:
+    "@api3/airnode-admin": ^0.10.0
     "@api3/airnode-protocol": ^0.10.0
     prettier: ^2.8.4
     rimraf: ^4.1.2
     solhint: ^3.4.0
   languageName: unknown
   linkType: soft
+
+"@api3/airnode-abi@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "@api3/airnode-abi@npm:0.10.0"
+  dependencies:
+    ethers: ^5.7.2
+    lodash: ^4.17.21
+  checksum: 283c1e83944d0a628dbc0c29046a927e5ac40835d0532e465087b49d051e176670b046d45586deacadb52ea10465b5b8d159f700c6e41474fa2b1c7c10246c01
+  languageName: node
+  linkType: hard
+
+"@api3/airnode-admin@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "@api3/airnode-admin@npm:0.10.0"
+  dependencies:
+    "@api3/airnode-abi": ^0.10.0
+    "@api3/airnode-protocol": ^0.10.0
+    "@api3/airnode-utilities": ^0.10.0
+    "@api3/airnode-validator": ^0.10.0
+    "@api3/promise-utils": ^0.3.0
+    ethers: ^5.7.2
+    lodash: ^4.17.21
+    yargs: ^17.6.2
+  bin:
+    airnode-admin: dist/bin/admin.js
+  checksum: 108a93230869c3eabbc3ff1f1706283acd9125da24531d696798fce77893ea92e1ef46fd0d9c4033265aed50204ed084062ef1eab2cdde443bd3021132cf72d6
+  languageName: node
+  linkType: hard
 
 "@api3/airnode-protocol@npm:^0.10.0":
   version: 0.10.0

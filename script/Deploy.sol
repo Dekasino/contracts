@@ -5,6 +5,8 @@ import { Script } from "forge-std/Script.sol";
 
 import { DekasinoUSDC } from "src/Vaults/dUSDC.sol";
 import { DekasinoUSDT } from "src/Vaults/dUSDT.sol";
+import { DekasinoRoulette } from "src/Games/DekasinoRoulette.sol";
+import {IVault} from "src/Vaults/Interface/IVault.sol";
 
 contract Deploy is Script {
     function run() external {
@@ -12,8 +14,28 @@ contract Deploy is Script {
         uint256 privKey = vm.deriveKey(mnemonic, 0);
         vm.startBroadcast(privKey);
 
-        new DekasinoUSDC();
-        new DekasinoUSDT();
+        DekasinoUSDC usdc = DekasinoUSDC(0xbF3d3ED0bFfbd76cc6509d7Eb528Ac3Abf9055Cb);
+        DekasinoUSDT usdt = DekasinoUSDT(0x4d05DF05724807123011d4E96Ff0a56Ca4f9BF19);
+        DekasinoRoulette roulette = new DekasinoRoulette();
+
+        usdc.setVaultController(address(roulette),true);
+        usdt.setVaultController(address(roulette),true);
+
+        roulette.setToken(
+            address(usdc.underlying()),
+            true,
+            IVault(address(usdc)),
+            0.25 ether,
+            100 ether
+        );
+
+        roulette.setToken(
+            address(usdt.underlying()),
+            true,
+            IVault(address(usdt)),
+            0.25 ether,
+            100 ether
+        );
 
         vm.stopBroadcast();
     }
