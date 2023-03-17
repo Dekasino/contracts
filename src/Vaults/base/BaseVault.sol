@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol";
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { ERC20 } from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import { IERC20Metadata } from "openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract BaseVault is ERC20, Ownable {
     IERC20Metadata public immutable underlying;

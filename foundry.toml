@@ -1,39 +1,41 @@
 # Full reference https://github.com/foundry-rs/foundry/tree/master/config
 
 [profile.default]
-  auto_detect_solc = false
-  bytecode_hash = "none"
-  cbor_metadata = false
-  fuzz = { runs = 1_000 }
-  gas_reports = ["*"]
-  libs = ["lib"]
-  optimizer = true
-  optimizer_runs = 10_000
-  out = "out"
-  script = "script"
-  solc = "0.8.19"
-  src = "src"
-  test = "test"
+auto_detect_solc = false
+bytecode_hash = "none"
+cbor_metadata = false
+fuzz = { runs = 1_000 }
+gas_reports = ["*"]
+libs = ["lib"]
+optimizer = true
+optimizer_runs = 10_000
+out = "out"
+script = "script"
+solc = "0.8.19"
+src = "src"
+test = "test"
 
 [profile.ci]
-  fuzz = { runs = 10_000 }
-  verbosity = 4
+fuzz = { runs = 10_000 }
+verbosity = 4
 
 [etherscan]
-  ethereum = { key = "${ETHERSCAN}" }
-  goerli = { key = "${ETHERSCAN}" }
+ethereum = { key = "${ETHERSCAN}" }
+goerli = { key = "${ETHERSCAN}" }
+arbgoerli = { key = "${ARBISCAN}" }
 
 [fmt]
-  bracket_spacing = true
-  int_types = "long"
-  line_length = 120
-  multiline_func_header = "all"
-  number_underscore = "thousands"
-  quote_style = "double"
-  tab_width = 4
-  wrap_comments = true
+bracket_spacing = true
+int_types = "long"
+line_length = 120
+multiline_func_header = "all"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true
 
 [rpc_endpoints]
-  ethereum = "${MAINNET}"
-  goerli = "${GOERLI}"
-  localhost = "http://localhost:8545"
+ethereum = "${MAINNET}"
+goerli = "${GOERLI}"
+arbgoerli = "${ARBGOERLI}"
+localhost = "http://localhost:8545"

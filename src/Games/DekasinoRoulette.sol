@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import {IERC20} from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
-import {RrpRequesterV0} from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
-import {IVault} from "src/Vaults/Interface/IVault.sol";
+import { RrpRequesterV0 } from "@api3/airnode-protocol/contracts/rrp/requesters/RrpRequesterV0.sol";
+import { IVault } from "src/Vaults/Interface/IVault.sol";
 
 contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     error BetAmount();
@@ -34,24 +34,26 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     }
 
     /**
-     * Goerli TESTNET
+     * Arbitrum goerli TESTNET
      */
     address internal airnode = 0x6238772544f029ecaBfDED4300f13A3c4FE84E1D;
     address internal rrpAddress = 0xa0AD79D995DdeeB18a14eAef56A549A04e3Aa1Bd;
     bytes32 internal endpointIdUint256 = 0xfb6d017bb87991b7495f563db3c8cf59ff87b09781947bb1e417006ad7f55a78;
-    address internal sponsorWallet;
+
+    address payable public sponsorWallet;
+    uint256 public gasForProcessing;
 
     mapping(bytes32 => address) private idToUser;
     mapping(bytes32 => uint256) private idToSystemIndex;
     mapping(bytes32 => uint256) private idToUserIndex;
 
-    mapping(uint256 => bool) private validChoice;
-
     Bet[] public allBets;
     mapping(address => Bet[]) public userBets;
     mapping(address => Token) public tokens;
 
-    event BetPlaced(address indexed user, uint256 requestId, uint256 betAmount, uint256[38] bets, address token, uint256 timestamp);
+    event BetPlaced(
+        address indexed user, uint256 requestId, uint256 betAmount, uint256[38] bets, address token, uint256 timestamp
+    );
     event WheelSpinned(
         address indexed user,
         uint256 requestId,
@@ -63,21 +65,14 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     );
 
     constructor() RrpRequesterV0(rrpAddress) {
-        validChoice[1] = true; //Straight
-        validChoice[2] = true; //Split
-        validChoice[3] = true; //Street
-        validChoice[4] = true; //Corner
-        validChoice[5] = true; //0,00,1,2,3
-        validChoice[6] = true; //Six line
-        validChoice[12] = true; //Dozen/Column
-        validChoice[18] = true; //High/Low/Red/Black/Odd/Even
+        gasForProcessing = 0.0005 ether;
     }
 
-    function placeBet(address _token, uint256[38] memory _betAmounts) external {
+    function placeBet(address _token, uint256[38] memory _betAmounts) external payable {
+        require(msg.value >= gasForProcessing, "Insufficient fees");
         (uint256 total, uint256 highest) = _validateBet(_token, _betAmounts);
         IERC20 token = IERC20(_token);
 
-        token.transferFrom(msg.sender, address(this), total);
         uint256 maxPayout = highest * 35;
 
         bytes32 requestId = airnodeRrp.makeFullRequest(
@@ -86,12 +81,15 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
         tokens[_token].vault.lockBet(uint256(requestId), maxPayout);
 
-        allBets.push(Bet(requestId, msg.sender, _token, _betAmounts, total,0,block.timestamp,0, false));
-        userBets[msg.sender].push(Bet(requestId, msg.sender, _token, _betAmounts, total,0,block.timestamp,0, false));
+        allBets.push(Bet(requestId, msg.sender, _token, _betAmounts, total, 0, block.timestamp, 0, false));
+        userBets[msg.sender].push(Bet(requestId, msg.sender, _token, _betAmounts, total, 0, block.timestamp, 0, false));
 
         idToUser[requestId] = msg.sender;
         idToSystemIndex[requestId] = allBets.length - 1;
         idToUserIndex[requestId] = userBets[msg.sender].length - 1;
+
+        token.transferFrom(msg.sender, address(this), total);
+        sponsorWallet.transfer(msg.value);
 
         emit BetPlaced(msg.sender, uint256(requestId), total, _betAmounts, _token, block.timestamp);
     }
@@ -122,7 +120,9 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         user.rolledNumber = rolledNumber;
         system.rolledNumber = rolledNumber;
 
-        emit WheelSpinned(user.player, uint256(requestId), user.token, rolledNumber, user.totalBet, wonAmount, block.timestamp);
+        emit WheelSpinned(
+            user.player, uint256(requestId), user.token, rolledNumber, user.totalBet, wonAmount, block.timestamp
+        );
     }
 
     function _validateBet(
@@ -135,20 +135,17 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     {
         Token memory tkn = tokens[_token];
         if (!tkn.isSupported) revert TokenNotSupported();
-        uint256 totalNumbers;
         for (uint256 i = 0; i < 38;) {
             if (_betAmounts[i] > 0) {
-                if (_betAmounts[i] < tkn.minPossibleFragment) revert MinBetFragment();
+                if (_betAmounts[i] <= tkn.minPossibleFragment) revert MinBetFragment();
                 if (_betAmounts[i] > highestBet) highestBet = _betAmounts[i];
-                totalNumbers++;
                 totalBet += _betAmounts[i];
             }
             unchecked {
                 i++;
             }
         }
-        if (totalBet < tkn.minBet || totalBet > tkn.maxBet) revert BetAmount();
-        if (!validChoice[totalNumbers]) revert InvalidBet();
+        if (totalBet <= tkn.minBet || totalBet >= tkn.maxBet) revert BetAmount();
     }
 
     function setToken(
@@ -171,18 +168,27 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         t.minPossibleFragment = _minBet / 18;
     }
 
-    function setOracle(address _airnode, address _sponsorWallet, bytes32 _endpointIdUint256) external onlyOwner {
+    function setOracle(
+        address _airnode,
+        address payable _sponsorWallet,
+        bytes32 _endpointIdUint256,
+        uint256 _gasAmount
+    )
+        external
+        onlyOwner
+    {
         airnode = _airnode;
         sponsorWallet = _sponsorWallet;
         endpointIdUint256 = _endpointIdUint256;
+        gasForProcessing = _gasAmount;
     }
 
     function getTotalBetsByUser(address _user) external view returns (uint256) {
-      return userBets[_user].length;
+        return userBets[_user].length;
     }
 
     function getTotalBets() external view returns (uint256) {
-      return allBets.length;
+        return allBets.length;
     }
 
     function getBetsOfUser(address user, uint256 from, uint256 to) external view returns (Bet[] memory bets) {
