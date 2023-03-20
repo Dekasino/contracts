@@ -13,6 +13,14 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     error TokenNotSupported();
     error InvalidBet();
 
+    enum BetStatus {
+        Invalid,
+        InProgress,
+        Won,
+        Lost,
+        Refunded
+    }
+
     struct Bet {
         bytes32 requestId;
         address player;
@@ -22,7 +30,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         uint256 wonAmount;
         uint256 timestamp;
         uint256 rolledNumber;
-        bool status;
+        BetStatus status;
     }
 
     struct Token {
@@ -42,6 +50,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
     address payable public sponsorWallet;
     uint256 public gasForProcessing;
+    uint256 public waitTimeUntilRefund;
 
     mapping(bytes32 => address) private idToUser;
     mapping(bytes32 => uint256) private idToSystemIndex;
@@ -66,6 +75,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
     constructor() RrpRequesterV0(rrpAddress) {
         gasForProcessing = 0.0005 ether;
+        waitTimeUntilRefund = 1 hours;
     }
 
     function placeBet(address _token, uint256[38] memory _betAmounts) external payable {
@@ -81,8 +91,12 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
         tokens[_token].vault.lockBet(uint256(requestId), maxPayout);
 
-        allBets.push(Bet(requestId, msg.sender, _token, _betAmounts, total, 0, block.timestamp, 0, false));
-        userBets[msg.sender].push(Bet(requestId, msg.sender, _token, _betAmounts, total, 0, block.timestamp, 0, false));
+        allBets.push(
+            Bet(requestId, msg.sender, _token, _betAmounts, total, 0, block.timestamp, 0, BetStatus.InProgress)
+        );
+        userBets[msg.sender].push(
+            Bet(requestId, msg.sender, _token, _betAmounts, total, 0, block.timestamp, 0, BetStatus.InProgress)
+        );
 
         idToUser[requestId] = msg.sender;
         idToSystemIndex[requestId] = allBets.length - 1;
@@ -96,33 +110,53 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
     function fulfillUint256(bytes32 requestId, bytes calldata data) external onlyAirnodeRrp {
         uint256 qrngUint256 = abi.decode(data, (uint256));
-        uint256 rolledNumber = qrngUint256 % 38; //0 to 38, 0 = 00, 1 = 0, 2 = 1 ... 37 = 36
+        uint256 rolledNumber = qrngUint256 % 38; //0 to 38, 0 = 0, 1 = 1, 2 = 2 ... 37 = 00
 
         Bet storage system = allBets[idToSystemIndex[requestId]];
         Bet storage user = userBets[system.player][idToUserIndex[requestId]];
-        IVault vault = tokens[user.token].vault;
-        IERC20 token = IERC20(user.token);
+        Bet memory memBet = allBets[idToSystemIndex[requestId]];
 
-        uint256 wonAmount = user.betAmounts[rolledNumber] * 35;
-        uint256 amountToVault = user.totalBet - user.betAmounts[rolledNumber];
+        IVault vault = tokens[memBet.token].vault;
+        IERC20 token = IERC20(memBet.token);
+
+        uint256 wonAmount = memBet.betAmounts[rolledNumber] * 35;
+        uint256 amountToVault = memBet.totalBet - memBet.betAmounts[rolledNumber];
         token.transfer(address(vault), amountToVault);
         vault.unlockBet(uint256(requestId), wonAmount);
-        wonAmount += user.betAmounts[rolledNumber];
+        wonAmount += memBet.betAmounts[rolledNumber];
 
         if (wonAmount > 0) {
-            token.transfer(user.player, wonAmount);
-            user.status = true;
-            system.status = true;
+            token.transfer(memBet.player, wonAmount);
+            user.status = BetStatus.Won;
+            system.status = BetStatus.Won;
             user.wonAmount = wonAmount;
             system.wonAmount = wonAmount;
+        } else {
+            user.status = BetStatus.Lost;
+            system.status = BetStatus.Lost;
         }
 
         user.rolledNumber = rolledNumber;
         system.rolledNumber = rolledNumber;
 
         emit WheelSpinned(
-            user.player, uint256(requestId), user.token, rolledNumber, user.totalBet, wonAmount, block.timestamp
+            memBet.player, uint256(requestId), memBet.token, rolledNumber, memBet.totalBet, wonAmount, block.timestamp
         );
+    }
+
+    function refundBet(uint256[] calldata _betIds) external onlyOwner { 
+        uint256 len = _betIds.length;
+        for(uint256 i; i < len; i++) {
+            Bet memory bet = allBets[_betIds[i]];
+            require(bet.status == BetStatus.InProgress,"Invalid bet");
+            require(block.timestamp >= bet.timestamp + waitTimeUntilRefund,"Too early");
+
+            allBets[_betIds[i]].status = BetStatus.Refunded;
+            userBets[bet.player][idToUserIndex[bet.requestId]].status = BetStatus.Refunded;
+
+            IERC20(bet.token).transfer(bet.player,bet.totalBet);
+            tokens[bet.token].vault.unlockBet(_betIds[i],0);
+        }
     }
 
     function _validateBet(
@@ -145,7 +179,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
                 i++;
             }
         }
-        if (totalBet <= tkn.minBet || totalBet >= tkn.maxBet) revert BetAmount();
+        if (totalBet < tkn.minBet || totalBet > tkn.maxBet) revert BetAmount();
     }
 
     function setToken(
@@ -181,6 +215,11 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         sponsorWallet = _sponsorWallet;
         endpointIdUint256 = _endpointIdUint256;
         gasForProcessing = _gasAmount;
+    }
+
+    function setTimeForRefund(uint256 _newTime) external onlyOwner {
+        require(_newTime > 1 hours, "Invalid Time");
+        waitTimeUntilRefund = _newTime;
     }
 
     function getTotalBetsByUser(address _user) external view returns (uint256) {

@@ -13,9 +13,9 @@ contract BaseVault is ERC20, Ownable {
     uint256 public highWaterMark;
     uint256 public allTimeHigh;
 
-    address public stakingContract = address(0x1);
+    address public stakingContract = address(0x123);
     uint256 public stakingPercent = 300;
-    uint256 public maxSupply = 100_000;
+    uint256 public maxSupply;
 
     mapping(address => bool) public isVaultController;
     mapping(uint256 => uint256) internal lockAmounts;
@@ -34,6 +34,7 @@ contract BaseVault is ERC20, Ownable {
         underlying = IERC20Metadata(_underlying);
         _decimals = underlying.decimals();
         scalingFactor = 10 ** _decimals;
+        maxSupply = 100_000 * 10 ** _decimals;
 
         highWaterMark = scalingFactor;
         allTimeHigh = highWaterMark;
