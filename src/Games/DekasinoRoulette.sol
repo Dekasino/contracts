@@ -232,15 +232,19 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
     function getBetsOfUser(address user, uint256 from, uint256 to) external view returns (Bet[] memory bets) {
         bets = new Bet[](to - from + 1);
+        uint256 count;
         for (uint256 i = from; i <= to; i++) {
-            bets[i] = userBets[user][i];
+            bets[count] = userBets[user][i];
+            count++;
         }
     }
 
     function getAllBets(uint256 from, uint256 to) external view returns (Bet[] memory bets) {
         bets = new Bet[](to - from + 1);
+        uint256 count;
         for (uint256 i = from; i <= to; i++) {
-            bets[i] = allBets[i];
+            bets[count] = allBets[i];
+            count++;
         }
     }
 }

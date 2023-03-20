@@ -14,8 +14,8 @@ contract Deploy is Script {
         uint256 privKey = vm.deriveKey(mnemonic, 0);
         vm.startBroadcast(privKey);
 
-        DekasinoUSDC usdc = DekasinoUSDC(0x27d4eb45571c8FF63dcb22B825D885B32E6E7bcd);
-        DekasinoUSDT usdt = DekasinoUSDT(0x62402A00c2D9cae2CfC4739A92F212b8ccC1ef0d);
+        DekasinoUSDC usdc = new DekasinoUSDC();
+        DekasinoUSDT usdt = new DekasinoUSDT();
         DekasinoRoulette roulette = new DekasinoRoulette();
 
         usdc.setVaultController(address(roulette), true);
