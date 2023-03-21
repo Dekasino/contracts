@@ -12,6 +12,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     error MinBetFragment();
     error TokenNotSupported();
     error InvalidBet();
+    error InsufficientFees();
 
     enum BetStatus {
         Invalid,
@@ -22,10 +23,10 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     }
 
     struct Bet {
-        bytes32 requestId;
+        uint256 requestId;
         address player;
         address token;
-        uint256[38] betAmounts;
+        uint128[38] betAmounts;
         uint256 totalBet;
         uint256 wonAmount;
         uint256 timestamp;
@@ -37,7 +38,6 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         bool isSupported;
         IVault vault;
         uint256 minBet;
-        uint256 minPossibleFragment;
         uint256 maxBet;
     }
 
@@ -52,16 +52,15 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     uint256 public gasForProcessing;
     uint256 public waitTimeUntilRefund;
 
-    mapping(bytes32 => address) private idToUser;
-    mapping(bytes32 => uint256) private idToSystemIndex;
-    mapping(bytes32 => uint256) private idToUserIndex;
+    mapping(uint256 => address) public idToUser;
+    mapping(uint256 => uint256) public idToSystemIndex;
 
     Bet[] public allBets;
-    mapping(address => Bet[]) public userBets;
+    mapping(address => uint256[]) public userBets;
     mapping(address => Token) public tokens;
 
     event BetPlaced(
-        address indexed user, uint256 requestId, uint256 betAmount, uint256[38] bets, address token, uint256 timestamp
+        address indexed user, uint256 requestId, uint256 betAmount, address token, uint256 timestamp
     );
     event WheelSpinned(
         address indexed user,
@@ -78,43 +77,60 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         waitTimeUntilRefund = 1 hours;
     }
 
-    function placeBet(address _token, uint256[38] memory _betAmounts) external payable {
-        require(msg.value >= gasForProcessing, "Insufficient fees");
-        (uint256 total, uint256 highest) = _validateBet(_token, _betAmounts);
-        IERC20 token = IERC20(_token);
+    function placeBet(address _token, uint128[38] calldata _betAmounts) external payable {
+        if (msg.value < gasForProcessing) revert InsufficientFees();
 
-        uint256 maxPayout = highest * 35;
+        uint256 totalBet;
+        uint256 highestBet;
+        Token memory tkn = tokens[_token];
 
-        bytes32 requestId = airnodeRrp.makeFullRequest(
-            airnode, endpointIdUint256, address(this), sponsorWallet, address(this), this.fulfillUint256.selector, ""
+        if (!tkn.isSupported) revert TokenNotSupported();
+        for (uint256 i = 0; i < 38;) {
+            if (_betAmounts[i] > 0) {
+                if (_betAmounts[i] > highestBet) highestBet = _betAmounts[i];
+                totalBet += _betAmounts[i];
+            }
+            unchecked {
+                i++;
+            }
+        }
+
+        if (totalBet < tkn.minBet || totalBet > tkn.maxBet) revert BetAmount();
+
+        uint256 requestId = uint256(
+            airnodeRrp.makeFullRequest(
+                airnode,
+                endpointIdUint256,
+                address(this),
+                sponsorWallet,
+                address(this),
+                this.fulfillUint256.selector,
+                ""
+            )
         );
 
-        tokens[_token].vault.lockBet(uint256(requestId), maxPayout);
+        tokens[_token].vault.lockBet(uint256(requestId), highestBet * 35);
 
         allBets.push(
-            Bet(requestId, msg.sender, _token, _betAmounts, total, 0, block.timestamp, 0, BetStatus.InProgress)
-        );
-        userBets[msg.sender].push(
-            Bet(requestId, msg.sender, _token, _betAmounts, total, 0, block.timestamp, 0, BetStatus.InProgress)
+            Bet(requestId, msg.sender, _token, _betAmounts, totalBet, 0, block.timestamp, 0, BetStatus.InProgress)
         );
 
+        userBets[msg.sender].push(allBets.length - 1);
         idToUser[requestId] = msg.sender;
         idToSystemIndex[requestId] = allBets.length - 1;
-        idToUserIndex[requestId] = userBets[msg.sender].length - 1;
 
-        token.transferFrom(msg.sender, address(this), total);
+        IERC20(_token).transferFrom(msg.sender, address(this), totalBet);
         sponsorWallet.transfer(msg.value);
 
-        emit BetPlaced(msg.sender, uint256(requestId), total, _betAmounts, _token, block.timestamp);
+        emit BetPlaced(msg.sender, uint256(requestId), totalBet, _token, block.timestamp);
     }
 
     function fulfillUint256(bytes32 requestId, bytes calldata data) external onlyAirnodeRrp {
         uint256 qrngUint256 = abi.decode(data, (uint256));
         uint256 rolledNumber = qrngUint256 % 38; //0 to 38, 0 = 0, 1 = 1, 2 = 2 ... 37 = 00
 
-        Bet storage system = allBets[idToSystemIndex[requestId]];
-        Bet storage user = userBets[system.player][idToUserIndex[requestId]];
-        Bet memory memBet = allBets[idToSystemIndex[requestId]];
+        Bet storage bet = allBets[idToSystemIndex[uint256(requestId)]];
+        Bet memory memBet = allBets[idToSystemIndex[uint256(requestId)]];
 
         IVault vault = tokens[memBet.token].vault;
         IERC20 token = IERC20(memBet.token);
@@ -127,59 +143,31 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
         if (wonAmount > 0) {
             token.transfer(memBet.player, wonAmount);
-            user.status = BetStatus.Won;
-            system.status = BetStatus.Won;
-            user.wonAmount = wonAmount;
-            system.wonAmount = wonAmount;
+            bet.status = BetStatus.Won;
+            bet.wonAmount = wonAmount;
         } else {
-            user.status = BetStatus.Lost;
-            system.status = BetStatus.Lost;
+            bet.status = BetStatus.Lost;
         }
 
-        user.rolledNumber = rolledNumber;
-        system.rolledNumber = rolledNumber;
+        bet.rolledNumber = rolledNumber;
 
         emit WheelSpinned(
             memBet.player, uint256(requestId), memBet.token, rolledNumber, memBet.totalBet, wonAmount, block.timestamp
         );
     }
 
-    function refundBet(uint256[] calldata _betIds) external onlyOwner { 
+    function refundBet(uint256[] calldata _betIds) external onlyOwner {
         uint256 len = _betIds.length;
-        for(uint256 i; i < len; i++) {
+        for (uint256 i; i < len; i++) {
             Bet memory bet = allBets[_betIds[i]];
-            require(bet.status == BetStatus.InProgress,"Invalid bet");
-            require(block.timestamp >= bet.timestamp + waitTimeUntilRefund,"Too early");
+            require(bet.status == BetStatus.InProgress, "Invalid bet");
+            require(block.timestamp >= bet.timestamp + waitTimeUntilRefund, "Too early");
 
             allBets[_betIds[i]].status = BetStatus.Refunded;
-            userBets[bet.player][idToUserIndex[bet.requestId]].status = BetStatus.Refunded;
 
-            IERC20(bet.token).transfer(bet.player,bet.totalBet);
-            tokens[bet.token].vault.unlockBet(_betIds[i],0);
+            IERC20(bet.token).transfer(bet.player, bet.totalBet);
+            tokens[bet.token].vault.unlockBet(_betIds[i], 0);
         }
-    }
-
-    function _validateBet(
-        address _token,
-        uint256[38] memory _betAmounts
-    )
-        internal
-        view
-        returns (uint256 totalBet, uint256 highestBet)
-    {
-        Token memory tkn = tokens[_token];
-        if (!tkn.isSupported) revert TokenNotSupported();
-        for (uint256 i = 0; i < 38;) {
-            if (_betAmounts[i] > 0) {
-                if (_betAmounts[i] <= tkn.minPossibleFragment) revert MinBetFragment();
-                if (_betAmounts[i] > highestBet) highestBet = _betAmounts[i];
-                totalBet += _betAmounts[i];
-            }
-            unchecked {
-                i++;
-            }
-        }
-        if (totalBet < tkn.minBet || totalBet > tkn.maxBet) revert BetAmount();
     }
 
     function setToken(
@@ -198,8 +186,6 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         t.vault = _vault;
         t.minBet = _minBet;
         t.maxBet = _maxBet;
-
-        t.minPossibleFragment = _minBet / 18;
     }
 
     function setOracle(
@@ -234,7 +220,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         bets = new Bet[](to - from + 1);
         uint256 count;
         for (uint256 i = from; i <= to; i++) {
-            bets[count] = userBets[user][i];
+            bets[count] = allBets[userBets[user][i]];
             count++;
         }
     }
