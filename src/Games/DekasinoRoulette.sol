@@ -27,10 +27,10 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         address player;
         address token;
         uint128[38] betAmounts;
-        uint256 totalBet;
-        uint256 wonAmount;
-        uint256 timestamp;
-        uint256 rolledNumber;
+        uint128 totalBet;
+        uint128 wonAmount;
+        uint32 timestamp;
+        uint8 rolledNumber;
         BetStatus status;
     }
 
@@ -59,9 +59,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     mapping(address => uint256[]) public userBets;
     mapping(address => Token) public tokens;
 
-    event BetPlaced(
-        address indexed user, uint256 requestId, uint256 betAmount, address token, uint256 timestamp
-    );
+    event BetPlaced(address indexed user, uint256 requestId, uint256 betAmount, address token, uint256 timestamp);
     event WheelSpinned(
         address indexed user,
         uint256 requestId,
@@ -112,7 +110,17 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         tokens[_token].vault.lockBet(uint256(requestId), highestBet * 35);
 
         allBets.push(
-            Bet(requestId, msg.sender, _token, _betAmounts, totalBet, 0, block.timestamp, 0, BetStatus.InProgress)
+            Bet(
+                requestId,
+                msg.sender,
+                _token,
+                _betAmounts,
+                uint128(totalBet),
+                0,
+                uint32(block.timestamp),
+                0,
+                BetStatus.InProgress
+            )
         );
 
         userBets[msg.sender].push(allBets.length - 1);
@@ -144,12 +152,12 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         if (wonAmount > 0) {
             token.transfer(memBet.player, wonAmount);
             bet.status = BetStatus.Won;
-            bet.wonAmount = wonAmount;
+            bet.wonAmount = uint128(wonAmount);
         } else {
             bet.status = BetStatus.Lost;
         }
 
-        bet.rolledNumber = rolledNumber;
+        bet.rolledNumber = uint8(rolledNumber);
 
         emit WheelSpinned(
             memBet.player, uint256(requestId), memBet.token, rolledNumber, memBet.totalBet, wonAmount, block.timestamp
@@ -159,7 +167,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     function refundBet(uint256[] calldata _betIds) external onlyOwner {
         uint256 len = _betIds.length;
         for (uint256 i; i < len; i++) {
-            Bet memory bet = allBets[_betIds[i]];
+            Bet memory bet = allBets[idToSystemIndex[_betIds[i]]];
             require(bet.status == BetStatus.InProgress, "Invalid bet");
             require(block.timestamp >= bet.timestamp + waitTimeUntilRefund, "Too early");
 

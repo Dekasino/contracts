@@ -13,8 +13,13 @@ contract BaseVault is ERC20, Ownable {
     uint256 public highWaterMark;
     uint256 public allTimeHigh;
 
-    address public stakingContract = address(0x123);
-    uint256 public stakingPercent = 300;
+    uint256 public lastUpdatedTime;
+    uint256 public lastPrice;
+    uint256 public updatePeriod;
+    int256 public currentAPY;
+
+    address public stakingContract;
+    uint256 public stakingPercent;
     uint256 public maxSupply;
 
     mapping(address => bool) public isVaultController;
@@ -38,6 +43,11 @@ contract BaseVault is ERC20, Ownable {
 
         highWaterMark = scalingFactor;
         allTimeHigh = highWaterMark;
+        updatePeriod = 7 days;
+        lastPrice = 10**_decimals;
+
+        stakingContract = address(0xdeadbeef);
+        stakingPercent = 300;
     }
 
     function deposit(uint256 _underlyingAmount) external {
@@ -74,6 +84,8 @@ contract BaseVault is ERC20, Ownable {
             underlying.transfer(msg.sender, _unlockAmount);
         }
 
+        updateAPY();
+
         // solhint-disable reentrancy
         highWaterMark = getHighWaterMark();
 
@@ -87,6 +99,20 @@ contract BaseVault is ERC20, Ownable {
         }
 
         emit BetUnlocked(_betId, _unlockAmount, block.timestamp);
+    }
+
+    function updateAPY() public {
+        if (block.timestamp >= lastUpdatedTime + updatePeriod) {
+            uint256 currentPrice = getUnderlyingAmount(scalingFactor);
+            int256 difference = int256(currentPrice) - int256(lastPrice);
+            currentAPY = difference * 360 days / (int256(block.timestamp) - int256(lastUpdatedTime));
+            lastPrice = currentPrice;
+            lastUpdatedTime = block.timestamp;
+        }
+    }
+
+    function setUpdatePeriod(uint256 _newUpdatePeriod) external onlyOwner{
+        updatePeriod = _newUpdatePeriod;
     }
 
     function setVaultController(address _controller, bool _status) external onlyOwner {
