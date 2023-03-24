@@ -84,8 +84,6 @@ contract BaseVault is ERC20, Ownable {
             underlying.transfer(msg.sender, _unlockAmount);
         }
 
-        updateAPY();
-
         // solhint-disable reentrancy
         highWaterMark = getHighWaterMark();
 
@@ -97,6 +95,8 @@ contract BaseVault is ERC20, Ownable {
             highWaterMark = getHighWaterMark();
             allTimeHigh = highWaterMark;
         }
+
+        updateAPY();
 
         emit BetUnlocked(_betId, _unlockAmount, block.timestamp);
     }

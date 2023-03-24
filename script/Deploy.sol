@@ -16,7 +16,7 @@ contract Deploy is Script {
 
         DekasinoUSDC usdc = new DekasinoUSDC();
         DekasinoUSDT usdt = new DekasinoUSDT();
-        DekasinoRoulette roulette = new DekasinoRoulette();
+        DekasinoRoulette roulette = DekasinoRoulette(0x1C412507E29DC9397087aAd0E7f5Bd8Ce4cBbb43);
 
         usdc.setVaultController(address(roulette), true);
         usdt.setVaultController(address(roulette), true);
