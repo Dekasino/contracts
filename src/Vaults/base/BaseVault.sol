@@ -25,7 +25,7 @@ contract BaseVault is ERC20, Ownable {
     mapping(address => bool) public isVaultController;
     mapping(uint256 => uint256) internal lockAmounts;
 
-    uint256 internal totalLockedAmount;
+    uint256 public totalLockedAmount;
 
     event BetLocked(uint256 _betId, uint256 _lockAmount, uint256 timestamp);
     event BetUnlocked(uint256 _betId, uint256 _unlockAmount, uint256 timestamp);
