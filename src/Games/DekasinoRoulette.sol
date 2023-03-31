@@ -42,7 +42,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     }
 
     /**
-     * Arbitrum goerli TESTNET
+     * Fantom TESTNET
      */
     address internal airnode = 0x6238772544f029ecaBfDED4300f13A3c4FE84E1D;
     address internal rrpAddress = 0xa0AD79D995DdeeB18a14eAef56A549A04e3Aa1Bd;
@@ -72,7 +72,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
     constructor() RrpRequesterV0(rrpAddress) {
         gasForProcessing = 0.0005 ether;
-        waitTimeUntilRefund = 1 hours;
+        waitTimeUntilRefund = 30 minutes;
     }
 
     function placeBet(address _token, uint128[38] calldata _betAmounts) external payable {
@@ -83,12 +83,13 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         Token memory tkn = tokens[_token];
 
         if (!tkn.isSupported) revert TokenNotSupported();
-        for (uint256 i = 0; i < 38;) {
-            if (_betAmounts[i] > 0) {
-                if (_betAmounts[i] > highestBet) highestBet = _betAmounts[i];
-                totalBet += _betAmounts[i];
-            }
-            unchecked {
+
+        unchecked {
+            for (uint256 i = 0; i < 38;) {
+                if (_betAmounts[i] > 0) {
+                    if (_betAmounts[i] > highestBet) highestBet = _betAmounts[i];
+                    totalBet += _betAmounts[i];
+                }
                 i++;
             }
         }
@@ -107,25 +108,27 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
             )
         );
 
-        tokens[_token].vault.lockBet(uint256(requestId), highestBet * 35);
+        unchecked {
+            tokens[_token].vault.lockBet(uint256(requestId), highestBet * 35);
 
-        allBets.push(
-            Bet(
-                requestId,
-                msg.sender,
-                _token,
-                _betAmounts,
-                uint128(totalBet),
-                0,
-                uint32(block.timestamp),
-                0,
-                BetStatus.InProgress
-            )
-        );
+            allBets.push(
+                Bet(
+                    requestId,
+                    msg.sender,
+                    _token,
+                    _betAmounts,
+                    uint128(totalBet),
+                    0,
+                    uint32(block.timestamp),
+                    0,
+                    BetStatus.InProgress
+                )
+            );
 
-        userBets[msg.sender].push(allBets.length - 1);
-        idToUser[requestId] = msg.sender;
-        idToSystemIndex[requestId] = allBets.length - 1;
+            userBets[msg.sender].push(allBets.length - 1);
+            idToUser[requestId] = msg.sender;
+            idToSystemIndex[requestId] = allBets.length - 1;
+        }
 
         IERC20(_token).transferFrom(msg.sender, address(this), totalBet);
         sponsorWallet.transfer(msg.value);
@@ -164,10 +167,11 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         );
     }
 
-    function refundBet(uint256[] calldata _betIds) external onlyOwner {
+    function refundBet(uint256[] calldata _betIds) external {
         uint256 len = _betIds.length;
         for (uint256 i; i < len; i++) {
             Bet memory bet = allBets[idToSystemIndex[_betIds[i]]];
+            require(msg.sender == owner() || msg.sender == bet.player, "Unauthorized");
             require(bet.status == BetStatus.InProgress, "Invalid bet");
             require(block.timestamp >= bet.timestamp + waitTimeUntilRefund, "Too early");
 
@@ -198,7 +202,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
     function setOracle(
         address _airnode,
-        address payable _sponsorWallet,
+        
         bytes32 _endpointIdUint256,
         uint256 _gasAmount
     )
@@ -206,13 +210,16 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         onlyOwner
     {
         airnode = _airnode;
-        sponsorWallet = _sponsorWallet;
         endpointIdUint256 = _endpointIdUint256;
         gasForProcessing = _gasAmount;
     }
 
+    function setSponsorWallet(address payable _sponsorWallet) external onlyOwner {
+        sponsorWallet = _sponsorWallet;
+    }
+
     function setTimeForRefund(uint256 _newTime) external onlyOwner {
-        require(_newTime > 1 hours, "Invalid Time");
+        require(_newTime > 30 minutes, "Invalid Time");
         waitTimeUntilRefund = _newTime;
     }
 
