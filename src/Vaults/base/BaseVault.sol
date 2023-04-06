@@ -39,12 +39,12 @@ contract BaseVault is ERC20, Ownable {
         underlying = IERC20Metadata(_underlying);
         _decimals = underlying.decimals();
         scalingFactor = 10 ** _decimals;
-        maxSupply = 100_000 * 10 ** _decimals;
+        maxSupply = 50_000 * 10 ** _decimals;
 
         highWaterMark = scalingFactor;
         allTimeHigh = highWaterMark;
         updatePeriod = 7 days;
-        lastPrice = 10**_decimals;
+        lastPrice = 10 ** _decimals;
 
         stakingContract = address(0xdeadbeef);
         stakingPercent = 300;
@@ -52,7 +52,7 @@ contract BaseVault is ERC20, Ownable {
 
     function deposit(uint256 _underlyingAmount) external {
         uint256 amountToMint = totalSupply() == 0 ? _underlyingAmount : getShareAmount(_underlyingAmount);
-        require(totalSupply() + amountToMint <= maxSupply * scalingFactor, "Max supply exceeded");
+        require(totalSupply() + amountToMint <= maxSupply, "Max supply exceeded");
         underlying.transferFrom(msg.sender, address(this), _underlyingAmount);
         _mint(msg.sender, amountToMint);
     }
@@ -111,7 +111,7 @@ contract BaseVault is ERC20, Ownable {
         }
     }
 
-    function setUpdatePeriod(uint256 _newUpdatePeriod) external onlyOwner{
+    function setUpdatePeriod(uint256 _newUpdatePeriod) external onlyOwner {
         updatePeriod = _newUpdatePeriod;
     }
 
@@ -125,7 +125,7 @@ contract BaseVault is ERC20, Ownable {
     }
 
     function setMaxSupply(uint256 _newSupply) external onlyOwner {
-        require(_newSupply > totalSupply() / scalingFactor, "Invalid max supply");
+        require(_newSupply > totalSupply() , "Invalid max supply");
         maxSupply = _newSupply;
     }
 

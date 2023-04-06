@@ -14,7 +14,7 @@ contract RouletteTest is PRBTest, StdCheats {
     DekasinoUSDC internal dusdc;
     IERC20Metadata internal usdc;
     DekasinoRoulette internal roulette;
-    uint128[38] internal bets;
+    uint80[38] internal bets;
 
     function setUp() external {
         dusdc = new DekasinoUSDC();
@@ -32,7 +32,7 @@ contract RouletteTest is PRBTest, StdCheats {
 
         for (uint256 i; i < 38; i++) {
             //if (i % 2 == 0) continue;
-            bets[i] = uint128(0.1 ether + (i * 100));
+            bets[i] = uint80(0.1 ether + (i * 100));
         }
     }
 

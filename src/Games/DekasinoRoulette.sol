@@ -26,9 +26,9 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         uint256 requestId;
         address player;
         address token;
-        uint128[38] betAmounts;
-        uint128 totalBet;
-        uint128 wonAmount;
+        uint80[38] betAmounts;
+        uint80 totalBet;
+        uint80 wonAmount;
         uint32 timestamp;
         uint8 rolledNumber;
         BetStatus status;
@@ -75,7 +75,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         waitTimeUntilRefund = 30 minutes;
     }
 
-    function placeBet(address _token, uint128[38] calldata _betAmounts) external payable {
+    function placeBet(address _token, uint80[38] calldata _betAmounts) external payable {
         if (msg.value < gasForProcessing) revert InsufficientFees();
 
         uint256 totalBet;
@@ -117,7 +117,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
                     msg.sender,
                     _token,
                     _betAmounts,
-                    uint128(totalBet),
+                    uint80(totalBet),
                     0,
                     uint32(block.timestamp),
                     0,
@@ -155,7 +155,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         if (wonAmount > 0) {
             token.transfer(memBet.player, wonAmount);
             bet.status = BetStatus.Won;
-            bet.wonAmount = uint128(wonAmount);
+            bet.wonAmount = uint80(wonAmount);
         } else {
             bet.status = BetStatus.Lost;
         }
@@ -200,15 +200,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         t.maxBet = _maxBet;
     }
 
-    function setOracle(
-        address _airnode,
-        
-        bytes32 _endpointIdUint256,
-        uint256 _gasAmount
-    )
-        external
-        onlyOwner
-    {
+    function setOracle(address _airnode, bytes32 _endpointIdUint256, uint256 _gasAmount) external onlyOwner {
         airnode = _airnode;
         endpointIdUint256 = _endpointIdUint256;
         gasForProcessing = _gasAmount;
