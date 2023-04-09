@@ -28,7 +28,7 @@ contract RouletteTest is PRBTest, StdCheats {
         vm.deal(address(this), 1 ether);
         usdc.approve(address(dusdc), type(uint256).max);
         usdc.approve(address(roulette), type(uint256).max);
-        dusdc.deposit(1e25);
+        dusdc.deposit(1e20);
 
         for (uint256 i; i < 38; i++) {
             //if (i % 2 == 0) continue;

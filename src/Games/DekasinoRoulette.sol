@@ -58,6 +58,11 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
     Bet[] public allBets;
     mapping(address => uint256[]) public userBets;
     mapping(address => Token) public tokens;
+    mapping(address => uint256) public totalBetCount;
+    mapping(address => uint256) public totalWagered;
+
+    uint256 public totalUsers;
+    uint256 public totalBetAmount;
 
     event BetPlaced(address indexed user, uint256 requestId, uint256 betAmount, address token, uint256 timestamp);
     event WheelSpinned(
@@ -84,12 +89,10 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
         if (!tkn.isSupported) revert TokenNotSupported();
 
-        unchecked {
-            for (uint256 i = 0; i < 38;) {
-                if (_betAmounts[i] > 0) {
-                    if (_betAmounts[i] > highestBet) highestBet = _betAmounts[i];
-                    totalBet += _betAmounts[i];
-                }
+        for (uint256 i = 0; i < 38;) {
+            if (_betAmounts[i] > highestBet) highestBet = _betAmounts[i];
+            totalBet += _betAmounts[i];
+            unchecked {
                 i++;
             }
         }
@@ -148,6 +151,11 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
 
         uint256 wonAmount = memBet.betAmounts[rolledNumber] * 35;
         uint256 amountToVault = memBet.totalBet - memBet.betAmounts[rolledNumber];
+        totalBetCount[memBet.token]++;
+        totalWagered[memBet.token] += memBet.totalBet;
+        totalBetAmount += memBet.totalBet;
+        if (userBets[memBet.player].length == 0) totalUsers++;
+
         token.transfer(address(vault), amountToVault);
         vault.unlockBet(uint256(requestId), wonAmount);
         wonAmount += memBet.betAmounts[rolledNumber];
