@@ -154,7 +154,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
         totalBetCount[memBet.token]++;
         totalWagered[memBet.token] += memBet.totalBet;
         totalBetAmount += memBet.totalBet;
-        if (userBets[memBet.player].length == 0) totalUsers++;
+        if (userBets[memBet.player].length == 1) totalUsers++;
 
         token.transfer(address(vault), amountToVault);
         vault.unlockBet(uint256(requestId), wonAmount);
