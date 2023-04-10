@@ -1,0 +1,38 @@
+{
+  "name": "@Dekasino/contracts",
+  "description": "",
+  "version": "1.0.0",
+  "author": {
+    "name": "Dekasino",
+    "url": "https://github.com/Dekasino"
+  },
+  "devDependencies": {
+    "@api3/airnode-admin": "^0.10.0",
+    "prettier": "^2.8.4",
+    "rimraf": "^4.1.2",
+    "solhint": "^3.4.0"
+  },
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "forge",
+    "foundry",
+    "smart-contracts",
+    "solidity",
+    "template"
+  ],
+  "packageManager": "yarn@3.4.1",
+  "private": true,
+  "scripts": {
+    "clean": "rimraf cache out",
+    "lint": "yarn lint:sol && yarn prettier:check",
+    "lint:sol": "forge fmt && yarn solhint \"{script,src,test}/**/*.sol\"",
+    "prettier:check": "prettier --check \"**/*.{json,md,yml}\"",
+    "prettier": "prettier --write \"**/*.{json,md,yml}\"",
+    "deploy": "forge script Deploy --broadcast --verify --rpc-url",
+    "sponsor": "npx @api3/airnode-admin derive-sponsor-wallet-address --airnode-xpub xpub6CuDdF9zdWTRuGybJPuZUGnU4suZowMmgu15bjFZT2o6PUtk4Lo78KGJUGBobz3pPKRaN9sLxzj21CMe6StP3zUsd8tWEJPgZBesYBMY7Wo --airnode-address 0x6238772544f029ecaBfDED4300f13A3c4FE84E1D --sponsor-address"
+  },
+  "dependencies": {
+    "@api3/airnode-protocol": "^0.10.0"
+  }
+}
