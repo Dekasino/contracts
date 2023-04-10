@@ -28,7 +28,9 @@
     "lint": "yarn lint:sol && yarn prettier:check",
     "lint:sol": "forge fmt && yarn solhint \"{script,src,test}/**/*.sol\"",
     "prettier:check": "prettier --check \"**/*.{json,md,yml}\"",
-    "prettier": "prettier --write \"**/*.{json,md,yml}\""
+    "prettier": "prettier --write \"**/*.{json,md,yml}\"",
+    "deploy":"forge script Deploy --broadcast --verify --rpc-url",
+    "sponsor":"npx @api3/airnode-admin derive-sponsor-wallet-address --airnode-xpub xpub6CuDdF9zdWTRuGybJPuZUGnU4suZowMmgu15bjFZT2o6PUtk4Lo78KGJUGBobz3pPKRaN9sLxzj21CMe6StP3zUsd8tWEJPgZBesYBMY7Wo --airnode-address 0x6238772544f029ecaBfDED4300f13A3c4FE84E1D --sponsor-address"
   },
   "dependencies": {
     "@api3/airnode-protocol": "^0.10.0"
