@@ -15,15 +15,15 @@ contract Deploy is Script {
         uint256 privKey = vm.deriveKey(mnemonic, 0);
         vm.startBroadcast(privKey);
 
-        DekasinoUSDC usdc = DekasinoUSDC(0xe17361832CdDB0c98fDAE55DF5F6af0B4158420d);
-        DekasinoUSDT usdt = DekasinoUSDT(0xDA38D98e7e2416178Dd62b9162b22B734a0319C1);
+        DekasinoUSDC usdc =  DekasinoUSDC(0x6e10B8a37Ab52d86986E4542Df4B93e6043Ef826);
+        DekasinoUSDT usdt =  DekasinoUSDT(0x1ae35b05450808381BbA046E47e5198fAd068D48);
         DekasinoRoulette roulette = new DekasinoRoulette();
 
         usdc.setVaultController(address(roulette), true);
         usdt.setVaultController(address(roulette), true);
 
-        roulette.setToken(address(usdc.underlying()), true, IVault(address(usdc)), 0.25 ether, 100 ether);
-        roulette.setToken(address(usdt.underlying()), true, IVault(address(usdt)), 0.25 ether, 100 ether);
+        roulette.setToken(address(usdc.underlying()), true, IVault(address(usdc)), 0.25 * 10**6, 100 * 10**6);
+        roulette.setToken(address(usdt.underlying()), true, IVault(address(usdt)), 0.25 * 10**6, 100 * 10**6);
 
         vm.stopBroadcast();
     }

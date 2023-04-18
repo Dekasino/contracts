@@ -22,21 +22,30 @@ contract RouletteTest is PRBTest, StdCheats {
         usdc = dusdc.underlying();
 
         dusdc.setVaultController(address(roulette), true);
-        roulette.setToken(address(dusdc.underlying()), true, IVault(address(dusdc)), 0.25 ether, 100 ether);
+        roulette.setToken(address(dusdc.underlying()), true, IVault(address(dusdc)), 0.25 * 10**6, 100 * 10**6);
 
         deal(address(usdc), address(this), 1e35, true);
         vm.deal(address(this), 1 ether);
         usdc.approve(address(dusdc), type(uint256).max);
         usdc.approve(address(roulette), type(uint256).max);
-        dusdc.deposit(1e20);
+        dusdc.deposit(1e10);
 
         for (uint256 i; i < 38; i++) {
             //if (i % 2 == 0) continue;
-            bets[i] = uint80(0.1 ether + (i * 100));
+            bets[i] = uint80(0.1 * 10**6 + (i * 100));
         }
     }
 
-    function testGas() external {
+    function testGas() public {
         roulette.placeBet{ value: 0.01 ether }(address(usdc), bets);
+    }
+
+    function testRefund() public {
+        testGas();
+        (uint256 id,,,,,,,) = roulette.allBets(0);
+        uint256[] memory ids = new uint256[](1);
+        vm.warp(block.timestamp + 1 hours);
+        ids[0] = id;
+        roulette.refundBet(ids);
     }
 }

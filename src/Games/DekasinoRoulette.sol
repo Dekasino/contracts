@@ -183,7 +183,7 @@ contract DekasinoRoulette is Ownable, RrpRequesterV0 {
             require(bet.status == BetStatus.InProgress, "Invalid bet");
             require(block.timestamp >= bet.timestamp + waitTimeUntilRefund, "Too early");
 
-            allBets[_betIds[i]].status = BetStatus.Refunded;
+            allBets[idToSystemIndex[_betIds[i]]].status = BetStatus.Refunded;
 
             IERC20(bet.token).transfer(bet.player, bet.totalBet);
             tokens[bet.token].vault.unlockBet(_betIds[i], 0);

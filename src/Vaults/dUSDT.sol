@@ -5,7 +5,7 @@ import { BaseVault } from "./base/BaseVault.sol";
 
 contract DekasinoUSDT is BaseVault {
     //Fantom Testnet USDT
-    constructor() BaseVault(0xCDDd3bfFCa16Bf8A891718ADB6A9c051871B674C, "Dekasino USDT", "dUSDT") {
+    constructor() BaseVault(0x6eCe4F315C0F7cC369d8D0eABdAC361328527bAc, "Dekasino USDT", "dUSDT") {
         this;
     }
 }
